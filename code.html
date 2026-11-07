@@ -1971,6 +1971,15 @@
       const login = document.getElementById('loginScreen');
       const app = document.getElementById('mainApp');
 
+      // Sync sector chosen on login screen with dashboard
+      const sectorVal = document.getElementById('loginSector')?.value;
+      if (sectorVal) {
+        const lbl = document.getElementById('sectorLabel');
+        if (lbl) lbl.textContent = sectorVal;
+        const idx = ZoneGuardState.sectors.indexOf(sectorVal);
+        if (idx !== -1) ZoneGuardState.sectorIndex = idx;
+      }
+
       if (login) login.classList.add('hidden-login');
       if (app) app.style.display = 'flex';
 
