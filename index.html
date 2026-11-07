@@ -760,22 +760,32 @@
               </span>
             </div>
             <h2 class="font-display text-2xl font-bold text-on-surface tracking-tight">Real Time Analysis</h2>
-            <p class="text-sm text-on-surface-variant">Deep optical remote-sensing model with high-resolution
-              segmentation overlay: <span class="text-error font-medium">red indicates oil contamination</span>, <span
-                class="text-primary font-medium">blue indicates clean water</span></p>
+            <p class="text-sm text-on-surface-variant">Deep optical remote-sensing model with dynamic fluid wave segmentation: <span class="text-error font-medium">moving red indicates active oil contamination</span>, <span class="text-primary font-medium">blue indicates clean water</span>, and <span class="text-tertiary font-medium">commercial vessel is strictly excluded (no spill on ship)</span></p>
           </div>
           <!-- Heatmap Viewport Controls -->
-          <div class="flex items-center gap-3 shrink-0">
+          <div class="flex items-center gap-2 flex-wrap shrink-0">
             <button
-              class="px-4 py-2.5 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-all text-sm font-semibold flex items-center gap-2 border border-outline-variant/60 shadow-sm cursor-pointer"
-              onclick="toggleHeatmapOverlay()">
-              <span class="material-symbols-outlined text-base">layers</span>
+              class="px-3.5 py-2 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-all text-xs font-semibold flex items-center gap-1.5 border border-outline-variant/60 shadow-sm cursor-pointer"
+              id="heatmapToggleBtn" onclick="toggleHeatmapOverlay()">
+              <span class="material-symbols-outlined text-sm">layers</span>
               <span id="heatmapToggleText">Hide Overlay</span>
             </button>
             <button
-              class="px-4 py-2.5 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-all text-sm font-semibold flex items-center gap-2 border border-outline-variant/60 shadow-sm cursor-pointer"
+              class="px-3.5 py-2 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-all text-xs font-semibold flex items-center gap-1.5 border border-outline-variant/60 shadow-sm cursor-pointer"
+              id="heatmapMotionBtn" onclick="toggleHeatmapMotion()">
+              <span class="material-symbols-outlined text-sm text-tertiary" id="motionIcon">air</span>
+              <span id="heatmapMotionText">Flow: Active</span>
+            </button>
+            <button
+              class="px-3.5 py-2 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-all text-xs font-semibold flex items-center gap-1.5 border border-outline-variant/60 shadow-sm cursor-pointer"
+              id="vesselLockBtn" onclick="toggleAISLock()">
+              <span class="material-symbols-outlined text-sm text-primary">directions_boat</span>
+              <span id="vesselLockText">AIS Lock: ON</span>
+            </button>
+            <button
+              class="px-3.5 py-2 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-all text-xs font-semibold flex items-center gap-1.5 border border-outline-variant/60 shadow-sm cursor-pointer"
               onclick="retriggerScan()">
-              <span class="material-symbols-outlined text-base">sync</span>
+              <span class="material-symbols-outlined text-sm">sync</span>
               <span>Re-Analyze</span>
             </button>
           </div>
@@ -791,43 +801,105 @@
               <img class="heatmap-layer z-0" id="baseFeedImage"
                 src="Oil-spill-detection-using-optical-remote-sensing-data-Brown-color-indicates-oil-spill.webp"
                 alt="Raw Optical Feed" />
-              <!-- Heatmap Overlay: Red on oil areas, Blue on non-oil areas -->
-              <img class="heatmap-layer z-10 opacity-90" id="heatmapOverlayImage" src="oil_spill_preview_smooth.png"
+
+              <!-- High-Performance Animated Real-Time Simulation Canvas -->
+              <canvas class="heatmap-layer z-10" id="realTimeHeatmapCanvas" width="800" height="531"></canvas>
+
+              <!-- Static fallback overlay (hidden when canvas is running) -->
+              <img class="heatmap-layer z-5 opacity-0 pointer-events-none" id="heatmapOverlayImage" src="oil_spill_preview_smooth.png"
                 alt="AI Heatmap Overlay" />
+
+              <!-- Dynamic Maritime Gyro Compass Strip -->
+              <div class="absolute top-0 inset-x-0 z-20 flex items-center justify-center pointer-events-none">
+                <div class="bg-surface/90 backdrop-blur-md px-4 py-1 rounded-b-xl border-x border-b border-outline-variant/50 flex items-center gap-3 text-[10px] font-mono shadow-md text-on-surface-variant">
+                  <span class="text-on-surface-variant/50">050°</span>
+                  <span class="text-on-surface-variant/50">060°</span>
+                  <span class="text-primary font-bold px-2 py-0.5 rounded bg-primary/10 border border-primary/30" id="gyroHeadingBadge">074.2° ENE</span>
+                  <span class="text-on-surface-variant/50">080°</span>
+                  <span class="text-on-surface-variant/50">090°</span>
+                  <span class="text-outline">|</span>
+                  <span class="text-tertiary font-semibold" id="vesselSpeedBadge">13.4 KTS SOG</span>
+                </div>
+              </div>
+
               <!-- Cyan scanline sweep -->
               <div class="scanline-sweep" id="scanlineSweep"></div>
+
               <!-- HUD Telemetry Badges -->
               <div
-                class="absolute top-4 left-4 z-20 flex items-center gap-2 bg-surface/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-outline-variant/50 text-[11px] font-mono text-on-surface shadow-md">
-                <span class="text-primary font-semibold">CAM-03 // LINE-04</span>
+                class="absolute top-8 left-4 z-20 flex items-center gap-2 bg-surface/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-outline-variant/50 text-[11px] font-mono text-on-surface shadow-md">
+                <span class="text-primary font-semibold">SAT-04 // OPTICAL FLIR</span>
                 <span class="text-outline">|</span>
                 <span id="hudTimestamp">16:38:47 UTC</span>
               </div>
               <div
-                class="absolute top-4 right-4 z-20 flex items-center gap-2 bg-surface/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-error/40 text-[11px] font-mono text-error shadow-md">
+                class="absolute top-8 right-4 z-20 flex items-center gap-2 bg-surface/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-error/40 text-[11px] font-mono text-error shadow-md">
                 <span class="w-2 h-2 rounded-full bg-error animate-ping"></span>
-                <span class="font-bold">CRITICAL OIL DETECTED</span>
+                <span class="font-bold">CRITICAL OIL DETECTED IN WATER</span>
+              </div>
+
+              <!-- Bottom Bar Badges: Oil Surface Area & Vessel Clean Status -->
+              <div
+                class="absolute bottom-4 left-4 z-20 bg-error/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-white shadow-lg flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                <span>SURFACE OIL: 0.84 m² (34.7% CONTAMINATED)</span>
               </div>
               <div
-                class="absolute bottom-4 left-4 z-20 bg-error/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-white shadow-lg">
-                SURFACE AREA: 0.84 m² (34.7% CONTAMINATED)
+                class="absolute bottom-4 right-4 z-20 bg-tertiary/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-surface shadow-lg flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm">verified</span>
+                <span>VESSEL: SAFE (EXCLUDED FROM SPILL)</span>
               </div>
             </div>
 
-            <!-- Legend Strip -->
-            <div class="flex flex-col gap-1.5 px-1">
+            <!-- Legend & Interactive Controls Bar -->
+            <div class="flex flex-col gap-2 px-1">
               <div class="heatmap-legend-bar"></div>
-              <div class="flex justify-between text-[11px] font-mono text-on-surface-variant">
-                <span class="text-blue-400 font-semibold">■ SAFE WATER (Clean)</span>
-                <span class="text-slate-400">LOW SHEEN</span>
-                <span class="text-amber-400">MODERATE</span>
-                <span class="text-error font-semibold">■ CRITICAL OIL CONTAMINATION</span>
+              <div class="flex flex-wrap items-center justify-between text-[11px] font-mono text-on-surface-variant gap-2">
+                <div class="flex items-center gap-3 flex-wrap">
+                  <span class="text-blue-400 font-semibold flex items-center gap-1">■ SAFE WATER (Clean)</span>
+                  <span class="text-slate-400">LOW SHEEN</span>
+                  <span class="text-amber-400">MODERATE</span>
+                  <span class="text-error font-semibold flex items-center gap-1">■ CRITICAL OIL CONTAMINATION</span>
+                  <span class="text-tertiary font-semibold flex items-center gap-1">■ SHIP HULL (NON-LEAKAGE)</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span>Overlay Opacity:</span>
+                  <input type="range" id="heatmapOpacitySlider" min="0" max="100" value="88" class="w-20 accent-primary cursor-pointer" oninput="handleOpacityChange(this.value)">
+                  <span id="opacityValueText" class="w-8 text-right font-mono font-bold text-primary">88%</span>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Live Telemetry Column (1 col) -->
           <div class="flex flex-col gap-4">
+
+            <!-- Vessel Tracking & AIS Telemetry Card -->
+            <div class="p-5 rounded-2xl bg-surface-container/60 border border-tertiary/30 flex flex-col gap-2.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-medium text-tertiary uppercase tracking-wider flex items-center gap-1.5 font-bold">
+                  <span class="material-symbols-outlined text-base">directions_boat</span>
+                  AIS Vessel Tracking
+                </span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-tertiary/15 text-tertiary border border-tertiary/30 font-bold">EXCLUDED</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-on-surface font-semibold">Tracked Target</span>
+                <span class="text-primary font-bold">MV PACIFIC CARRIER</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-on-surface-variant">Hull Integrity</span>
+                <span class="text-tertiary font-bold">100% (No Hull Leak)</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-on-surface-variant">Spill Mask Override</span>
+                <span class="text-on-surface font-medium">Ship Mask Active ✓</span>
+              </div>
+              <div class="pt-2 border-t border-outline-variant/30 flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
+                <span>Speed / Heading:</span>
+                <span class="text-primary font-bold" id="telemetrySpeedHdg">13.4 kts / 074° ENE</span>
+              </div>
+            </div>
 
             <!-- Model Confidence Metric -->
             <div class="p-5 rounded-2xl bg-surface-container/60 border border-outline-variant/40 flex flex-col gap-3">
@@ -840,19 +912,17 @@
                   class="h-full rounded-full bg-gradient-to-r from-primary-container to-primary transition-all duration-700"
                   id="cvConfidenceBar" style="width: 94.2%"></div>
               </div>
-              <span class="text-[11px] text-on-surface-variant font-mono">Algorithm: ResNet-50 + Remote Optical Thermal
-                Fusion</span>
+              <span class="text-[11px] text-on-surface-variant font-mono">Algorithm: ResNet-50 + Remote Optical Thermal Fusion</span>
             </div>
 
             <!-- Segmentation Ratio breakdown -->
             <div class="p-5 rounded-2xl bg-surface-container/60 border border-outline-variant/40 flex flex-col gap-3">
-              <span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Classification
-                Breakdown</span>
+              <span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Classification Breakdown</span>
               <div class="space-y-2.5 text-xs">
                 <div class="flex items-center justify-between">
                   <span class="flex items-center gap-1.5 text-error font-medium">
                     <span class="w-2.5 h-2.5 rounded-sm bg-error"></span>
-                    Hydrocarbon (Oil)
+                    Hydrocarbon (Oil in Water)
                   </span>
                   <span class="font-mono font-bold text-error" id="oilRatioText">34.7%</span>
                 </div>
@@ -861,7 +931,14 @@
                     <span class="w-2.5 h-2.5 rounded-sm bg-blue-500"></span>
                     Surface Water (Clean)
                   </span>
-                  <span class="font-mono font-bold text-blue-400" id="waterRatioText">65.3%</span>
+                  <span class="font-mono font-bold text-blue-400" id="waterRatioText">59.8%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="flex items-center gap-1.5 text-tertiary font-medium">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-tertiary"></span>
+                    Vessel Hull (Non-Spill)
+                  </span>
+                  <span class="font-mono font-bold text-tertiary" id="shipRatioText">5.5% [Safe]</span>
                 </div>
               </div>
             </div>
@@ -873,15 +950,15 @@
                 <span class="font-mono text-lg font-bold text-on-surface mt-0.5" id="inferenceStat">46ms</span>
               </div>
               <div class="p-3.5 rounded-xl bg-surface-container/60 border border-outline-variant/30 flex flex-col">
-                <span class="text-[10px] font-mono text-on-surface-variant uppercase">Frame Rate</span>
-                <span class="font-mono text-lg font-bold text-tertiary mt-0.5" id="fpsStat">24 FPS</span>
+                <span class="text-[10px] font-mono text-on-surface-variant uppercase">Simulation Rate</span>
+                <span class="font-mono text-lg font-bold text-tertiary mt-0.5" id="fpsStat">60 FPS</span>
               </div>
               <div class="p-3.5 rounded-xl bg-surface-container/60 border border-outline-variant/30 flex flex-col">
                 <span class="text-[10px] font-mono text-on-surface-variant uppercase">Specular Index</span>
                 <span class="font-mono text-lg font-bold text-secondary mt-0.5" id="specularStat">1.48 RI</span>
               </div>
               <div class="p-3.5 rounded-xl bg-surface-container/60 border border-outline-variant/30 flex flex-col">
-                <span class="text-[10px] font-mono text-on-surface-variant uppercase">Status</span>
+                <span class="text-[10px] font-mono text-on-surface-variant uppercase">Containment</span>
                 <span class="font-mono text-sm font-bold text-error mt-1" id="containmentStat">CONTAINING</span>
               </div>
             </div>
@@ -1468,6 +1545,11 @@
       alertAcknowledged: false,
       crewDispatched: false,
       heatmapVisible: true,
+      heatmapFlowing: true,
+      heatmapSpeed: 1.0,
+      heatmapOpacity: 0.88,
+      aisLockEnabled: true,
+      wakeEnabled: true,
       currentFilterIndex: 0,
       filters: ['All', 'Normal Only', 'Critical Only'],
       sectors: ['Sector B • Line 04', 'Sector A • Line 02', 'Sector C • Line 01', 'Sector D • Line 07'],
@@ -1759,17 +1841,423 @@
       }
     }
 
-    // ── 10. REAL TIME ANALYSIS HEATMAP CONTROLS ─────────────────────────────
+    // ── 10. REAL-TIME MOVING HEATMAP & MOVING SHIP ENGINE ─────────────────────
+    const HeatmapEngine = {
+      canvas: null,
+      ctx: null,
+      animId: null,
+      simW: 200,
+      simH: 133,
+      offCanvas: null,
+      offCtx: null,
+      offImgData: null,
+      densityMap: null,
+      shipSprite: null,
+      isDensityLoaded: false,
+      isSpriteLoaded: false,
+      wakeParticles: [],
+      lastTime: 0,
+      fpsTimer: 0,
+      fpsCount: 0,
+
+      init() {
+        this.canvas = document.getElementById('realTimeHeatmapCanvas');
+        if (!this.canvas) return;
+        this.ctx = this.canvas.getContext('2d');
+
+        // Offscreen canvas for fluid simulation (200x133)
+        this.offCanvas = document.createElement('canvas');
+        this.offCanvas.width = this.simW;
+        this.offCanvas.height = this.simH;
+        this.offCtx = this.offCanvas.getContext('2d');
+        this.offImgData = this.offCtx.createImageData(this.simW, this.simH);
+
+        // Preload clean oil density texture (strictly 0 on ship)
+        const densityImg = new Image();
+        densityImg.src = 'oil_density_clean.png';
+        densityImg.onload = () => {
+          const tCanvas = document.createElement('canvas');
+          tCanvas.width = this.simW;
+          tCanvas.height = this.simH;
+          const tCtx = tCanvas.getContext('2d');
+          tCtx.drawImage(densityImg, 0, 0, this.simW, this.simH);
+          const raw = tCtx.getImageData(0, 0, this.simW, this.simH).data;
+          this.densityMap = new Uint8Array(this.simW * this.simH);
+          for (let i = 0; i < this.simW * this.simH; i++) {
+            this.densityMap[i] = raw[i * 4];
+          }
+          this.isDensityLoaded = true;
+        };
+
+        // Preload cropped ship sprite (200x155)
+        this.shipSprite = new Image();
+        this.shipSprite.src = 'ship_sprite_cropped.png';
+        this.shipSprite.onload = () => {
+          this.isSpriteLoaded = true;
+        };
+
+        // Initialize 50 wake foam particles
+        this.wakeParticles = [];
+        for (let i = 0; i < 50; i++) {
+          this.wakeParticles.push(this.createWakeParticle(true));
+        }
+
+        // Start render loop
+        if (this.animId) cancelAnimationFrame(this.animId);
+        this.animId = requestAnimationFrame(t => this.render(t));
+      },
+
+      createWakeParticle(randomAge = false) {
+        const spread = (Math.random() - 0.5) * 18;
+        const progress = randomAge ? Math.random() : 0;
+        const life = 60 + Math.random() * 50;
+        return {
+          x: 475 + (Math.random() - 0.5) * 10 - progress * 160,
+          y: 375 + spread + progress * 80,
+          vx: -1.4 - Math.random() * 0.8,
+          vy: 0.65 + (Math.random() - 0.5) * 0.4,
+          size: 4 + progress * 16,
+          maxSize: 18 + Math.random() * 10,
+          alpha: (1 - progress) * 0.85,
+          life: life * (1 - progress),
+          maxLife: life
+        };
+      },
+
+      render(timestamp) {
+        this.animId = requestAnimationFrame(t => this.render(t));
+
+        if (!this.ctx) return;
+
+        if (!ZoneGuardState.heatmapVisible) {
+          this.ctx.clearRect(0, 0, 800, 531);
+          return;
+        }
+
+        const dt = (timestamp - this.lastTime) * 0.001;
+        this.lastTime = timestamp;
+
+        // FPS counter
+        this.fpsCount++;
+        if (timestamp - this.fpsTimer > 1000) {
+          const fpsEl = document.getElementById('fpsStat');
+          if (fpsEl) fpsEl.textContent = `${this.fpsCount} FPS`;
+          this.fpsCount = 0;
+          this.fpsTimer = timestamp;
+        }
+
+        const t = (ZoneGuardState.heatmapFlowing ? timestamp * 0.0015 * ZoneGuardState.heatmapSpeed : 10.0);
+
+        // Vessel hydrodynamic heave, surge & roll
+        const heave = Math.sin(t * 1.5) * 1.5;
+        const surge = Math.cos(t * 1.2) * 1.0;
+        const pitch = Math.sin(t * 0.9) * 0.008;
+
+        // Update gyro heading reading
+        const gyroBadge = document.getElementById('gyroHeadingBadge');
+        if (gyroBadge) {
+          const currentHdg = (74.2 + Math.sin(t * 0.4) * 0.7).toFixed(1);
+          gyroBadge.textContent = `${currentHdg}° ENE`;
+        }
+
+        // 1. FLUID WAVE SIMULATION FOR OIL SLICK & OCEAN
+        if (this.isDensityLoaded && this.densityMap) {
+          const data = this.offImgData.data;
+          const w = this.simW;
+          const h = this.simH;
+          const opacity = ZoneGuardState.heatmapOpacity;
+
+          for (let y = 0; y < h; y++) {
+            const waveY1 = Math.sin(y * 0.07 + t * 2.2);
+            const waveY2 = Math.cos(y * 0.09 - t * 1.6);
+
+            for (let x = 0; x < w; x++) {
+              const idx = (y * w + x) * 4;
+
+              const waveX1 = Math.cos(x * 0.06 - t * 1.8);
+              const waveX2 = Math.sin(x * 0.08 + t * 1.4);
+
+              const dx = (waveY1 * 3.5 + waveX1 * 2.2);
+              const dy = (waveY2 * 2.8 + waveX2 * 2.0);
+
+              const sx = Math.max(0, Math.min(w - 1, Math.round(x + dx)));
+              const sy = Math.max(0, Math.min(h - 1, Math.round(y + dy)));
+
+              let d = this.densityMap[sy * w + sx];
+
+              // STRICT SHIP EXCLUSION (Ship is in 200x133 grid at x: 110..163, y: 68..108)
+              // NO RED CAN EVER BE ON THE SHIP!
+              if (x >= 110 && x <= 163 && y >= 68 && y <= 108) {
+                d = 0;
+              }
+
+              if (d > 22) {
+                // OIL SPILL: Thermal Color Gradient (Red core -> Orange -> Amber)
+                const norm = d / 255.0;
+                let r, g, b, a;
+
+                if (norm > 0.55) {
+                  // Heavy core oil: Vibrant industrial red
+                  r = 239;
+                  g = Math.floor(45 + (1 - norm) * 40);
+                  b = 35;
+                  a = Math.floor(norm * 225 * opacity);
+                } else if (norm > 0.28) {
+                  // Moderate oil sheen: Hot orange
+                  r = 249;
+                  g = Math.floor(115 - (norm - 0.28) * 120);
+                  b = 22;
+                  a = Math.floor(norm * 200 * opacity);
+                } else {
+                  // Sheen boundary: Golden amber
+                  r = 234;
+                  g = 179;
+                  b = 8;
+                  a = Math.floor(norm * 170 * opacity);
+                }
+
+                // Thermal shimmer pulse
+                const pulse = 1.0 + Math.sin(t * 3.0 + x * 0.15 + y * 0.15) * 0.06;
+                data[idx] = Math.min(255, Math.floor(r * pulse));
+                data[idx + 1] = Math.min(255, Math.floor(g * pulse));
+                data[idx + 2] = b;
+                data[idx + 3] = a;
+              } else {
+                // CLEAN WATER: Deep Oceanic Blue Wave Ripples
+                const waveRipple = (waveY1 + waveX1) * 0.5;
+                data[idx] = 14;
+                data[idx + 1] = 116;
+                data[idx + 2] = 200;
+                data[idx + 3] = Math.max(0, Math.floor((32 + waveRipple * 18) * opacity));
+              }
+            }
+          }
+
+          this.offCtx.putImageData(this.offImgData, 0, 0);
+
+          // Clear main canvas and draw smoothed fluid heatmap
+          this.ctx.clearRect(0, 0, 800, 531);
+          this.ctx.imageSmoothingEnabled = true;
+          this.ctx.drawImage(this.offCanvas, 0, 0, 800, 531);
+        }
+
+        // 2. STRICT SHIP EXCLUSION CLIP (Guarantees zero red on ship)
+        this.ctx.save();
+        this.ctx.clearRect(445 + surge, 275 + heave, 200, 155);
+
+        // Draw crisp ship sprite bobbing in water with hydrodynamic sway
+        if (this.isSpriteLoaded && this.shipSprite) {
+          this.ctx.translate(545 + surge, 352 + heave);
+          this.ctx.rotate(pitch);
+          this.ctx.drawImage(this.shipSprite, -100, -77, 200, 155);
+          this.ctx.rotate(-pitch);
+          this.ctx.translate(-(545 + surge), -(352 + heave));
+        }
+        this.ctx.restore();
+
+        // 3. SHIP WAKE & BOW WAVE SIMULATION
+        if (ZoneGuardState.wakeEnabled) {
+          this.ctx.save();
+          const sternX = 472 + surge;
+          const sternY = 378 + heave;
+
+          // Upper wake arc (expanding towards left-down)
+          this.ctx.beginPath();
+          this.ctx.moveTo(sternX, sternY - 4);
+          this.ctx.quadraticCurveTo(sternX - 80, sternY + 10, sternX - 220, sternY + 65);
+          this.ctx.strokeStyle = 'rgba(215, 245, 255, 0.45)';
+          this.ctx.lineWidth = 3.5;
+          this.ctx.stroke();
+
+          // Lower wake arc
+          this.ctx.beginPath();
+          this.ctx.moveTo(sternX, sternY + 8);
+          this.ctx.quadraticCurveTo(sternX - 60, sternY + 45, sternX - 170, sternY + 120);
+          this.ctx.strokeStyle = 'rgba(215, 245, 255, 0.35)';
+          this.ctx.lineWidth = 3.0;
+          this.ctx.stroke();
+
+          // Internal turbulent propeller wash
+          this.ctx.beginPath();
+          this.ctx.moveTo(sternX, sternY);
+          this.ctx.lineTo(sternX - 160, sternY + 70);
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+          this.ctx.lineWidth = 5.0;
+          this.ctx.setLineDash([8, 6]);
+          this.ctx.lineDashOffset = -t * 25;
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
+
+          // Update & draw foaming wake particles
+          for (let i = 0; i < this.wakeParticles.length; i++) {
+            const p = this.wakeParticles[i];
+            p.x += p.vx * ZoneGuardState.heatmapSpeed;
+            p.y += p.vy * ZoneGuardState.heatmapSpeed;
+            p.life--;
+            p.size = 4 + (1 - p.life / p.maxLife) * (p.maxSize - 4);
+            p.alpha = Math.max(0, (p.life / p.maxLife) * 0.7);
+
+            if (p.life <= 0 || p.x < 180 || p.y > 520) {
+              this.wakeParticles[i] = this.createWakeParticle();
+              continue;
+            }
+
+            this.ctx.beginPath();
+            this.ctx.arc(p.x + surge, p.y + heave, p.size, 0, Math.PI * 2);
+            this.ctx.fillStyle = `rgba(240, 253, 255, ${p.alpha})`;
+            this.ctx.fill();
+          }
+
+          // Bow spray & pressure wave crests at ship prow (605, 312)
+          const bowX = 605 + surge;
+          const bowY = 312 + heave;
+          const bowPulse = Math.sin(t * 3.5) * 4;
+
+          this.ctx.beginPath();
+          this.ctx.arc(bowX, bowY, 16 + bowPulse, -0.6, 0.9);
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+          this.ctx.lineWidth = 2.5;
+          this.ctx.stroke();
+
+          this.ctx.beginPath();
+          this.ctx.arc(bowX + 6, bowY - 4, 14 + bowPulse * 0.7, 1.2, 2.7);
+          this.ctx.strokeStyle = 'rgba(220, 250, 255, 0.55)';
+          this.ctx.lineWidth = 2.0;
+          this.ctx.stroke();
+
+          this.ctx.restore();
+        }
+
+        // 4. AIS VESSEL TARGET RETICLE & NAVIGATION OVERLAY
+        if (ZoneGuardState.aisLockEnabled) {
+          this.ctx.save();
+          const targetX = 545 + surge;
+          const targetY = 352 + heave;
+          const halfW = 85;
+          const halfH = 65;
+          const cornerLen = 16;
+
+          // Target reticle bounding corners (Safe Cyan / Emerald)
+          this.ctx.strokeStyle = '#22d3ee';
+          this.ctx.lineWidth = 2.0;
+
+          // Top-Left corner
+          this.ctx.beginPath();
+          this.ctx.moveTo(targetX - halfW, targetY - halfH + cornerLen);
+          this.ctx.lineTo(targetX - halfW, targetY - halfH);
+          this.ctx.lineTo(targetX - halfW + cornerLen, targetY - halfH);
+          this.ctx.stroke();
+
+          // Top-Right corner
+          this.ctx.beginPath();
+          this.ctx.moveTo(targetX + halfW - cornerLen, targetY - halfH);
+          this.ctx.lineTo(targetX + halfW, targetY - halfH);
+          this.ctx.lineTo(targetX + halfW, targetY - halfH + cornerLen);
+          this.ctx.stroke();
+
+          // Bottom-Left corner
+          this.ctx.beginPath();
+          this.ctx.moveTo(targetX - halfW, targetY + halfH - cornerLen);
+          this.ctx.lineTo(targetX - halfW, targetY + halfH);
+          this.ctx.lineTo(targetX - halfW + cornerLen, targetY + halfH);
+          this.ctx.stroke();
+
+          // Bottom-Right corner
+          this.ctx.beginPath();
+          this.ctx.moveTo(targetX + halfW - cornerLen, targetY + halfH);
+          this.ctx.lineTo(targetX + halfW, targetY + halfH);
+          this.ctx.lineTo(targetX + halfW, targetY + halfH - cornerLen);
+          this.ctx.stroke();
+
+          // Heading Velocity Vector (Arrow pointing ~074°)
+          const vectorLen = 48;
+          const angle = -0.38;
+          const bowTipX = targetX + 55;
+          const bowTipY = targetY - 35;
+          const endX = bowTipX + Math.cos(angle) * vectorLen;
+          const endY = bowTipY + Math.sin(angle) * vectorLen;
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(bowTipX, bowTipY);
+          this.ctx.lineTo(endX, endY);
+          this.ctx.strokeStyle = '#38bdf8';
+          this.ctx.lineWidth = 2;
+          this.ctx.setLineDash([4, 3]);
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
+
+          // Arrowhead
+          this.ctx.beginPath();
+          this.ctx.arc(endX, endY, 3, 0, Math.PI * 2);
+          this.ctx.fillStyle = '#38bdf8';
+          this.ctx.fill();
+
+          // AIS Target Data Tag
+          this.ctx.fillStyle = 'rgba(10, 15, 26, 0.88)';
+          this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+          this.ctx.lineWidth = 1;
+          const tagW = 168;
+          const tagH = 46;
+          const tagX = targetX - halfW;
+          const tagY = targetY - halfH - tagH - 6;
+
+          this.ctx.beginPath();
+          this.ctx.roundRect(tagX, tagY, tagW, tagH, 6);
+          this.ctx.fill();
+          this.ctx.stroke();
+
+          this.ctx.font = 'bold 9px ui-monospace, SFMono-Regular, Menlo, monospace';
+          this.ctx.fillStyle = '#38bdf8';
+          this.ctx.fillText('AIS: MV PACIFIC CARRIER', tagX + 8, tagY + 13);
+
+          this.ctx.font = '9px ui-monospace, SFMono-Regular, Menlo, monospace';
+          this.ctx.fillStyle = '#4edea3';
+          this.ctx.fillText('STATUS: SAFE (0% OIL ON SHIP)', tagX + 8, tagY + 26);
+
+          this.ctx.fillStyle = '#94a3b8';
+          this.ctx.fillText('HDG: 074° ENE | SOG: 13.4 KTS', tagX + 8, tagY + 39);
+
+          this.ctx.restore();
+        }
+      }
+    };
+
     function toggleHeatmapOverlay() {
       ZoneGuardState.heatmapVisible = !ZoneGuardState.heatmapVisible;
-      const overlay = document.getElementById('heatmapOverlayImage');
+      const canvasEl = document.getElementById('realTimeHeatmapCanvas');
       const label = document.getElementById('heatmapToggleText');
-      if (overlay) {
-        overlay.style.opacity = ZoneGuardState.heatmapVisible ? '0.9' : '0.0';
+      if (canvasEl) {
+        canvasEl.style.opacity = ZoneGuardState.heatmapVisible ? '1' : '0';
       }
       if (label) {
         label.textContent = ZoneGuardState.heatmapVisible ? 'Hide Overlay' : 'Show Overlay';
       }
+    }
+
+    function toggleHeatmapMotion() {
+      ZoneGuardState.heatmapFlowing = !ZoneGuardState.heatmapFlowing;
+      const label = document.getElementById('heatmapMotionText');
+      const icon = document.getElementById('motionIcon');
+      if (label) {
+        label.textContent = ZoneGuardState.heatmapFlowing ? 'Flow: Active' : 'Flow: Paused';
+      }
+      if (icon) {
+        icon.className = ZoneGuardState.heatmapFlowing ? 'material-symbols-outlined text-sm text-tertiary' : 'material-symbols-outlined text-sm text-secondary';
+      }
+    }
+
+    function toggleAISLock() {
+      ZoneGuardState.aisLockEnabled = !ZoneGuardState.aisLockEnabled;
+      const label = document.getElementById('vesselLockText');
+      if (label) {
+        label.textContent = ZoneGuardState.aisLockEnabled ? 'AIS Lock: ON' : 'AIS Lock: OFF';
+      }
+    }
+
+    function handleOpacityChange(val) {
+      ZoneGuardState.heatmapOpacity = val / 100.0;
+      const text = document.getElementById('opacityValueText');
+      if (text) text.textContent = `${val}%`;
     }
 
     function retriggerScan() {
@@ -1977,7 +2465,10 @@
     }
 
     function handleForgotPassword() {
-      alert('ZoneGuard Self-Service Reset:\nPlease contact plant operations lead or email access@zoneguard.io with Operator ID #ZG-8824.');
+      const flash = document.getElementById('loginFlashError');
+      const flashText = document.getElementById('loginFlashText');
+      if (flash) flash.classList.remove('hidden');
+      if (flashText) flashText.textContent = 'Self-Service Reset: Contact plant operations lead or email access@zoneguard.io with Operator ID #ZG-8824.';
     }
 
     function authenticateAndEnter(operatorIdentity) {
@@ -1988,6 +2479,7 @@
       if (app) app.style.display = 'flex';
 
       sessionStorage.setItem('zoneguard_authenticated', 'true');
+      HeatmapEngine.init();
     }
 
     function logoutTerminal() {
@@ -2001,7 +2493,7 @@
       if (login) login.classList.remove('hidden-login');
     }
 
-    // Initialize authentication on page load
+    // Initialize authentication and simulation engine on page load
     window.addEventListener('DOMContentLoaded', () => {
       const isAuth = sessionStorage.getItem('zoneguard_authenticated') === 'true';
       const login = document.getElementById('loginScreen');
@@ -2014,6 +2506,9 @@
         if (login) login.classList.remove('hidden-login');
         if (app) app.style.display = 'none';
       }
+
+      // Initialize real-time simulation engine
+      HeatmapEngine.init();
     });
   </script>
 </body>
