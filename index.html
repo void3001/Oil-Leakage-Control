@@ -312,32 +312,24 @@
       padding: 10px;
     }
 
-    /* === Initial Login Screen === */
+    /* === GitHub-Style Initial Login Screen === */
     #loginScreen {
       position: fixed;
       inset: 0;
-      background: radial-gradient(circle at 50% 25%, #162030 0%, #0a0e16 80%, #06090e 100%);
+      background: #0d1117;
       z-index: 300;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 1.5rem;
-      transition: opacity 0.35s ease, visibility 0.35s ease;
+      overflow-y: auto;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
     }
     #loginScreen.hidden-login {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
-    }
-    .login-card {
-      background: rgba(21, 25, 34, 0.96);
-      border: 1px solid rgba(76, 215, 246, 0.35);
-      border-radius: 2rem;
-      padding: 2.5rem 2.25rem;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 50px rgba(76, 215, 246, 0.12);
-      position: relative;
     }
   </style>
 </head>
@@ -346,81 +338,61 @@
   class="bg-surface font-sans text-on-surface min-h-screen antialiased flex flex-col selection:bg-primary/20 selection:text-primary">
 
   <!-- ========================================================================= -->
-  <!-- INITIAL LOGIN SCREEN -->
+  <!-- GITHUB-STYLE INITIAL LOGIN SCREEN -->
   <!-- ========================================================================= -->
   <div id="loginScreen">
-    <div class="login-card flex flex-col gap-6">
-      <!-- Brand & Security Status -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary-container/30 to-tertiary/30 border border-primary/40 flex items-center justify-center shadow-lg shadow-primary/20">
-            <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">shield_with_heart</span>
-          </div>
-          <div>
-            <h1 class="font-display font-bold text-2xl tracking-tight text-on-surface">ZoneGuard <span class="text-primary text-sm font-mono font-normal">AI</span></h1>
-            <span class="text-[11px] font-mono text-on-surface-variant uppercase tracking-wider">Industrial Cybernetic SCADA</span>
-          </div>
-        </div>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono bg-tertiary/10 text-tertiary border border-tertiary/20">
-          <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
-          FLEET ONLINE
-        </span>
+    <!-- GitHub-style brand icon and title -->
+    <div class="flex flex-col items-center mb-6">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-primary-container/30 to-tertiary/30 border border-primary/40 flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
+        <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">shield_with_heart</span>
       </div>
+      <h1 class="text-2xl font-light text-center text-[#f0f6fc] tracking-tight">Sign in to ZoneGuard AI</h1>
+    </div>
 
-      <!-- Login Headline -->
-      <div class="space-y-1">
-        <h2 class="font-display text-xl font-bold text-on-surface">Terminal Authentication</h2>
-        <p class="text-xs text-on-surface-variant leading-relaxed">Enter operator authorization to access optical surveillance telemetry and containment actuators.</p>
+    <!-- GitHub-style Flash Error Alert (Hidden by default, shown on empty/invalid submit) -->
+    <div id="loginFlashError" class="hidden w-full max-w-[340px] mb-4 p-3 bg-[rgba(248,81,73,0.15)] border border-[rgba(248,81,73,0.4)] text-[#f85149] text-xs rounded-md flex items-center justify-between shadow-sm">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm shrink-0">error</span>
+        <span id="loginFlashText">Incorrect username or password.</span>
       </div>
+      <button type="button" onclick="document.getElementById('loginFlashError').classList.add('hidden')" class="text-[#f85149] hover:opacity-75 cursor-pointer ml-2">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
 
-      <!-- Login Form -->
-      <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+    <!-- GitHub-style Credentials Card -->
+    <div class="w-full max-w-[340px] bg-[#161b22] border border-[#30363d] rounded-md p-5 text-sm shadow-xl">
+      <form onsubmit="handleLoginSubmit(event)" class="space-y-4" novalidate>
         <div>
-          <label class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
-            Operator ID / Email
-          </label>
-          <input class="form-input" id="loginUsername" required type="text" value="david.chen@zoneguard.io" placeholder="operator@zoneguard.io" />
-        </div>
-
-        <div>
-          <label class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
-            Access Key / Security Token
-          </label>
-          <input class="form-input" id="loginPassword" required type="password" value="••••••••••••" placeholder="Enter security passphrase" />
+          <label for="loginUsername" class="text-sm font-normal text-[#f0f6fc] block mb-2">Username or email address</label>
+          <input id="loginUsername" type="text" autocomplete="username" class="w-full px-3 py-1.5 text-sm bg-[#0d1117] border border-[#30363d] rounded-md text-[#f0f6fc] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all" />
         </div>
 
         <div>
-          <label class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
-            Primary Plant Sector
-          </label>
-          <select class="form-input cursor-pointer" id="loginSector">
-            <option value="Sector B • Line 04">Sector B • Line 04 (Stamping Press Fleet)</option>
-            <option value="Sector A • Line 02">Sector A • Line 02 (Reservoir Bay)</option>
-            <option value="Sector C • Line 01">Sector C • Line 01 (Cooling Systems)</option>
-            <option value="Sector D • Line 07">Sector D • Line 07 (Manifold Fleet)</option>
-          </select>
+          <div class="flex items-center justify-between mb-2">
+            <label for="loginPassword" class="text-sm font-normal text-[#f0f6fc]">Password</label>
+            <a href="#" onclick="handleForgotPassword(); return false;" class="text-xs text-[#58a6ff] hover:underline">Forgot password?</a>
+          </div>
+          <input id="loginPassword" type="password" autocomplete="current-password" class="w-full px-3 py-1.5 text-sm bg-[#0d1117] border border-[#30363d] rounded-md text-[#f0f6fc] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all" />
         </div>
 
-        <!-- Action Buttons -->
-        <div class="pt-2 flex flex-col gap-2.5">
-          <button type="submit" class="w-full py-3 rounded-full bg-primary text-surface font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-base">login</span>
-            <span>Authorize Terminal Session</span>
-          </button>
-          <button type="button" onclick="quickLoginDemo()" class="w-full py-2.5 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-semibold text-xs border border-outline-variant/60 cursor-pointer flex items-center justify-center gap-1.5">
-            <span class="material-symbols-outlined text-sm text-tertiary">badge</span>
-            <span>Quick Login: David Chen (Lead Operator)</span>
-          </button>
-        </div>
+        <button type="submit" class="w-full mt-4 py-2 px-3 text-sm font-semibold text-white bg-[#238636] hover:bg-[#2ea043] border border-[rgba(240,246,252,0.1)] rounded-md transition-all shadow-sm cursor-pointer text-center">
+          Sign in
+        </button>
       </form>
+    </div>
 
-      <!-- Security Compliant Footer -->
-      <div class="pt-2 border-t border-outline-variant/30 text-center">
-        <span class="text-[10px] font-mono text-on-surface-variant">OSHA 1910.1200 &amp; EPA SPCC Level 4 Certified Interface</span>
-      </div>
+    <!-- GitHub-style Secondary Callout Box -->
+    <div class="w-full max-w-[340px] mt-4 p-4 text-center text-sm border border-[#30363d] rounded-md text-[#f0f6fc] bg-[#161b22]">
+      New to ZoneGuard? <a href="#" onclick="fillDemoCredentials(); return false;" class="text-[#58a6ff] hover:underline font-medium">Use demo credentials</a>.
+    </div>
+
+    <!-- GitHub-style Footer Links -->
+    <div class="mt-8 flex items-center justify-center gap-4 text-xs text-[#8b949e]">
+      <a href="#" onclick="return false;" class="hover:text-[#58a6ff] hover:underline">Terms</a>
+      <a href="#" onclick="return false;" class="hover:text-[#58a6ff] hover:underline">Privacy</a>
+      <a href="#" onclick="return false;" class="hover:text-[#58a6ff] hover:underline">Docs</a>
+      <a href="#" onclick="return false;" class="hover:text-[#58a6ff] hover:underline">Contact Support</a>
     </div>
   </div>
 
@@ -1957,28 +1929,60 @@
       document.body.removeChild(link);
     }
 
-    // ── 13. INITIAL LOGIN / AUTHENTICATION CONTROLLER ────────────────────────
+    // ── 13. GITHUB-STYLE LOGIN & AUTHENTICATION CONTROLLER ──────────────────
     function handleLoginSubmit(event) {
       event.preventDefault();
-      authenticateAndEnter();
+      const usernameInput = document.getElementById('loginUsername');
+      const passwordInput = document.getElementById('loginPassword');
+      const flash = document.getElementById('loginFlashError');
+      const flashText = document.getElementById('loginFlashText');
+
+      const username = usernameInput ? usernameInput.value.trim() : '';
+      const password = passwordInput ? passwordInput.value.trim() : '';
+
+      // Strict validation: Require content to be provided
+      if (!username || !password) {
+        if (flash) flash.classList.remove('hidden');
+        if (flashText) flashText.textContent = 'Please provide both username or email and password.';
+        if (!username && usernameInput) usernameInput.focus();
+        else if (passwordInput) passwordInput.focus();
+        return;
+      }
+
+      // Check minimal password length
+      if (password.length < 4) {
+        if (flash) flash.classList.remove('hidden');
+        if (flashText) flashText.textContent = 'Incorrect username or password.';
+        if (passwordInput) {
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+        return;
+      }
+
+      // Authorized
+      if (flash) flash.classList.add('hidden');
+      authenticateAndEnter(username);
     }
 
-    function quickLoginDemo() {
-      authenticateAndEnter();
+    function fillDemoCredentials() {
+      const usernameInput = document.getElementById('loginUsername');
+      const passwordInput = document.getElementById('loginPassword');
+      const flash = document.getElementById('loginFlashError');
+
+      if (usernameInput) usernameInput.value = 'david.chen@zoneguard.io';
+      if (passwordInput) passwordInput.value = 'zoneguard2026';
+      if (flash) flash.classList.add('hidden');
+      if (passwordInput) passwordInput.focus();
     }
 
-    function authenticateAndEnter() {
+    function handleForgotPassword() {
+      alert('ZoneGuard Self-Service Reset:\nPlease contact plant operations lead or email access@zoneguard.io with Operator ID #ZG-8824.');
+    }
+
+    function authenticateAndEnter(operatorIdentity) {
       const login = document.getElementById('loginScreen');
       const app = document.getElementById('mainApp');
-
-      // Sync sector chosen on login screen with dashboard
-      const sectorVal = document.getElementById('loginSector')?.value;
-      if (sectorVal) {
-        const lbl = document.getElementById('sectorLabel');
-        if (lbl) lbl.textContent = sectorVal;
-        const idx = ZoneGuardState.sectors.indexOf(sectorVal);
-        if (idx !== -1) ZoneGuardState.sectorIndex = idx;
-      }
 
       if (login) login.classList.add('hidden-login');
       if (app) app.style.display = 'flex';
