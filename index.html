@@ -54,6 +54,15 @@
       }
     }
   </script>
+  <script>
+    (function () {
+      try {
+        if (sessionStorage.getItem('zoneguard_authenticated') === 'true') {
+          document.documentElement.classList.add('zg-auth');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <style>
     @layer base {
 
@@ -62,12 +71,10 @@
         margin: 0;
         padding: 0;
         color-scheme: dark;
-        overflow-x: hidden;
-        max-width: 100%;
       }
 
       body {
-        overscroll-behavior: none;
+        overscroll-behavior-x: none;
       }
     }
 
@@ -76,7 +83,21 @@
     }
 
     ::-webkit-scrollbar {
-      display: none;
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0a0e16;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(76, 215, 246, 0.45);
     }
 
     .toggle-checkbox:checked {
@@ -265,12 +286,14 @@
       align-items: center;
       justify-content: center;
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
-      transition: opacity 0.25s ease;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
     }
 
     .modal-backdrop.active {
       opacity: 1;
+      visibility: visible;
       pointer-events: auto;
     }
 
@@ -365,6 +388,21 @@
     }
 
     /* === GitHub-Style Initial Login Screen === */
+    #mainApp {
+      display: none;
+    }
+
+    html.zg-auth #loginScreen {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    html.zg-auth #mainApp {
+      display: flex !important;
+    }
+
     #loginScreen {
       position: fixed;
       inset: 0;
@@ -374,6 +412,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      justify-content: safe center;
       padding: 1.5rem;
       overflow-y: auto;
       transition: opacity 0.25s ease, visibility 0.25s ease;
@@ -451,7 +490,7 @@
   <!-- ========================================================================= -->
   <!-- MAIN APPLICATION DASHBOARD (Wrapped for login visibility) -->
   <!-- ========================================================================= -->
-  <div id="mainApp" style="display: none;" class="w-full flex flex-col min-h-screen">
+  <div id="mainApp" class="w-full flex flex-col min-h-screen overflow-x-clip">
 
   <!-- Minimal Top Navigation Bar -->
   <header class="w-full border-b border-outline-variant/60 bg-surface/80 backdrop-blur-xl sticky top-0 z-40">
@@ -1394,16 +1433,14 @@
 
       <form onsubmit="handleCreateZoneSubmit(event)" class="space-y-4" autocomplete="off">
         <div>
-          <label for="zoneInputName" class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+          <label for="zoneInputName" class="block text-xs font-bold text-white uppercase tracking-wider mb-2">
             Zone Name &amp; Cell
           </label>
           <input class="zg-form-field bg-[#0b101b] text-white border border-slate-600 rounded-xl" id="zoneInputName" autocomplete="off" required type="text" />
         </div>
 
         <div>
-          <label for="zoneInputDesc" class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+          <label for="zoneInputDesc" class="block text-xs font-bold text-white uppercase tracking-wider mb-2">
             Machinery / Cell Description
           </label>
           <input class="zg-form-field bg-[#0b101b] text-white border border-slate-600 rounded-xl" id="zoneInputDesc" autocomplete="off" required type="text" />
@@ -1411,8 +1448,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label for="zoneInputSector" class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+            <label for="zoneInputSector" class="block text-xs font-bold text-white uppercase tracking-wider mb-2">
               Plant Sector
             </label>
             <select class="zg-form-field bg-[#0b101b] text-white border border-slate-600 rounded-xl cursor-pointer" id="zoneInputSector">
@@ -1423,8 +1459,7 @@
             </select>
           </div>
           <div>
-            <label for="zoneInputIcon" class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+            <label for="zoneInputIcon" class="block text-xs font-bold text-white uppercase tracking-wider mb-2">
               Equipment Type
             </label>
             <select class="zg-form-field bg-[#0b101b] text-white border border-slate-600 rounded-xl cursor-pointer" id="zoneInputIcon">
@@ -2538,20 +2573,27 @@
     }
 
     function authenticateAndEnter(operatorIdentity) {
+      try {
+        sessionStorage.setItem('zoneguard_authenticated', 'true');
+      } catch (e) {}
+
       const login = document.getElementById('loginScreen');
       const app = document.getElementById('mainApp');
 
+      document.documentElement.classList.add('zg-auth');
       if (login) login.classList.add('hidden-login');
       if (app) app.style.display = 'flex';
 
-      sessionStorage.setItem('zoneguard_authenticated', 'true');
       HeatmapEngine.init();
     }
 
     function logoutTerminal() {
       closeProfileModal();
-      sessionStorage.removeItem('zoneguard_authenticated');
+      try {
+        sessionStorage.removeItem('zoneguard_authenticated');
+      } catch (e) {}
 
+      document.documentElement.classList.remove('zg-auth');
       const login = document.getElementById('loginScreen');
       const app = document.getElementById('mainApp');
 
@@ -2561,20 +2603,23 @@
 
     // Initialize authentication and simulation engine on page load
     window.addEventListener('DOMContentLoaded', () => {
-      const isAuth = sessionStorage.getItem('zoneguard_authenticated') === 'true';
+      let isAuth = false;
+      try {
+        isAuth = sessionStorage.getItem('zoneguard_authenticated') === 'true';
+      } catch (e) {}
       const login = document.getElementById('loginScreen');
       const app = document.getElementById('mainApp');
 
       if (isAuth) {
+        document.documentElement.classList.add('zg-auth');
         if (login) login.classList.add('hidden-login');
         if (app) app.style.display = 'flex';
+        HeatmapEngine.init();
       } else {
+        document.documentElement.classList.remove('zg-auth');
         if (login) login.classList.remove('hidden-login');
         if (app) app.style.display = 'none';
       }
-
-      // Initialize real-time simulation engine
-      HeatmapEngine.init();
     });
   </script>
 </body>
